@@ -4,8 +4,16 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from bson.objectid import ObjectId
 
 # ----- INITIALISATION -----
-app = Flask(__name__)
+app = Flask(__name__) 
 
+@app.route('/')
+def home():
+    return {
+        "statut": "en ligne",
+        "message": "Bienvenue sur l'API Astra-serveur2",
+        "auteur": "Alan Mitha",
+        "version": "1.0"
+    }
 # Ton lien MongoDB modifié depuis ton bloc-notes
 MONGO_URI = "mongodb+srv://AlanMitha:252627shamilmitha02@cluster0.epdfpxp.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 client = MongoClient(MONGO_URI)
@@ -172,4 +180,5 @@ def get_messages(username):
 
 # ----- MAIN -----
 if __name__ == "__main__":
+
     app.run(host='0.0.0.0', port=5000, debug=True)
