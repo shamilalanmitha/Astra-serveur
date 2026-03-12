@@ -2,4 +2,6 @@ flask
 pymongo
 dnspython
 werkzeug
+pyjwt
+flask-limiter
 gunicorn
