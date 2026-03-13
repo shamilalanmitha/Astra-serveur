@@ -5,3 +5,4 @@ werkzeug
 pyjwt
 flask-limiter
 gunicorn
+flask-cors
