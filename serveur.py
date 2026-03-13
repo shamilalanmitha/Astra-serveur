@@ -8,8 +8,10 @@ import jwt
 from functools import wraps
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 # ----- CONFIG -----
 SECRET_KEY = os.getenv("SECRET_KEY", "ChangeThisSecret")
@@ -22,9 +24,18 @@ limiter = Limiter(key_func=get_remote_address)
 limiter.init_app(app)
 
 # ----- DATABASE -----
-client = MongoClient(MONGO_URI)
+client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
 db = client["AstraDB"]
 
+# AJOUTE CE TEST ICI :
+try:
+    client.admin.command('ping')
+    print("✅ MongoDB Atlas : Connexion réussie !")
+except Exception as e:
+    print(f"❌ Erreur de connexion MongoDB : {e}")
+
+users_col = db["users"]
+# ... reste de tes collections
 users_col = db["users"]
 posts_col = db["posts"]
 likes_col = db["likes"]
@@ -362,3 +373,4 @@ def profil(username):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
