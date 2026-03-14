@@ -368,6 +368,27 @@ def profil(username):
         "posts":posts
     })
 
+# ----- GET MESSAGES (Pour voir la discussion) -----
+@app.route("/messages/<contact>")
+@token_required
+def get_messages(current_user, contact):
+    # Récupère les messages entre moi et mon ami
+    query = {
+        "$or": [
+            {"sender": current_user["username"], "receiver": contact},
+            {"sender": contact, "receiver": current_user["username"]}
+        ]
+    }
+    msgs = messages_col.find(query).sort("date", 1) # 1 pour l'ordre chronologique
+    
+    output = []
+    for m in msgs:
+        output.append({
+            "sender": m["sender"],
+            "content": m["content"],
+            "date": m["date"].isoformat()
+        })
+    return jsonify(output)
 
 # ----- RUN SERVER (RENDER) -----
 if __name__ == "__main__":
