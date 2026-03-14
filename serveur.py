@@ -325,6 +325,21 @@ def message(current_user):
 
     return jsonify({"message":"Message envoyé"})
 
+# ----- GET ALL USERS (Pour la barre de stories) -----
+@app.route("/utilisateurs/liste")
+@token_required
+def liste_utilisateurs(current_user):
+    # On récupère tous les utilisateurs sauf nous-même
+    users = users_col.find({"username": {"$ne": current_user["username"]}})
+    
+    output = []
+    for u in users:
+        output.append({
+            "username": u["username"],
+            "online": u.get("online", False),
+            "avatar": u.get("profile_picture", "") # Utile pour les cercles !
+        })
+    return jsonify(output)
 
 # ----- SEARCH USER -----
 @app.route("/search")
