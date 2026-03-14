@@ -344,25 +344,21 @@ def liste_utilisateurs(current_user):
 # ----- SEARCH USER -----
 @app.route("/search")
 def search():
-
     username = request.args.get("username","")
-
-    users = users_col.find({
-        "username":{
-            "$regex":username,
-            "$options":"i"
-        }
-    })
+    users = users_col.find({"username":{"$regex":username, "$options":"i"}})
 
     output = []
-
     for u in users:
+        # On crée l'icône ici : lune si en ligne, rien si hors ligne
+        is_online = u.get("online", False)
+        lune = "🌕" if is_online else "" 
+
         output.append({
-            "username":u["username"]
+            "username": u["username"],
+            "online": is_online,
+            "status_icon": lune # On envoie la lune directement
         })
-
     return jsonify(output)
-
 
 # ----- PROFILE -----
 @app.route("/profil/<username>")
