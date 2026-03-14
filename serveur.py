@@ -125,12 +125,14 @@ def update_friendship(user1, user2, points):
             "last_interaction":datetime.utcnow()
         })
 
-
 # ----- HOME -----
 @app.route("/")
 def home():
-    return {"status": "Astra serveur actif 🚀"}
-
+    return {
+        "status": "Astra serveur actif 🚀",
+        "créateur": "Alan Mitha",
+        "version": "2.1"
+    }
 
 # ----- CREATE USER -----
 @app.route("/utilisateurs", methods=["POST"])
