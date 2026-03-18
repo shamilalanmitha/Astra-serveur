@@ -140,7 +140,7 @@ def home():
     return {
         "status": "Astra serveur actif 🚀",
         "créateur": "Alan Mitha",
-        "version": "2."3"
+        "version": "3.1"
     }
 
 # ----- CREATE USER -----
