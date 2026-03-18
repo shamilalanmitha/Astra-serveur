@@ -140,7 +140,7 @@ def home():
     return {
         "status": "Astra serveur actif 🚀",
         "créateur": "Alan Mitha",
-        "version": "2.1"
+        "version": "2."3"
     }
 
 # ----- CREATE USER -----
@@ -527,7 +527,54 @@ def upload_avatar(current_user):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+# ----- PUBLIER UNE VIDÉO (API STYLE TIKTOK) -----
+@app.route("/post/video", methods=["POST"])
+@token_required
+def upload_video(current_user):
+    # 1. Vérifier si un fichier est présent
+    if 'file' not in request.files:
+        return jsonify({"error": "Aucune vidéo trouvée"}), 400
+    
+    video_file = request.files['file']
+    description = request.form.get("content", "Nouvelle vidéo Astra 🚀")
 
+    try:
+        # 2. Upload vers Cloudinary avec les paramètres VIDÉO
+        upload_result = cloudinary.uploader.upload(
+            video_file,
+            resource_type = "video", # CRUCIAL : dit à l'API que c'est une vidéo
+            folder = "astra_videos/",
+            chunk_size = 6000000,   # Permet de charger par morceaux (plus stable)
+            eager = [
+                # Optimise la vidéo pour le format mobile (vertical)
+                {"width": 720, "height": 1280, "crop": "limit", "audio_codec": "aac"}
+            ]
+        )
+        
+        video_url = upload_result["secure_url"]
+
+        # 3. Enregistrer les infos dans MongoDB
+        new_video_post = {
+            "username": current_user["username"],
+            "content": description,
+            "video_url": video_url,
+            "type": "video", # Pour que l'app Flutter sache que c'est une vidéo
+            "date": datetime.utcnow(),
+            "likes": 0
+        }
+        
+        posts_col.insert_one(new_video_post)
+
+        return jsonify({
+            "message": "Vidéo Astra publiée avec succès ! 🎬",
+            "url": video_url
+        })
+
+    except Exception as e:
+        print(f"Erreur Upload Vidéo: {e}")
+        return jsonify({"error": "Erreur lors de l'envoi de la vidéo"}), 500
+           
 # ----- RUN SERVER (RENDER) -----
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
