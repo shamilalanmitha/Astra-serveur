@@ -2,14 +2,23 @@ from flask import Flask, jsonify, request
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta 
 import os
 import jwt
 from functools import wraps
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_cors import CORS
+import cloudinary
+import cloudinary.uploader
 
+# Remplace par tes clés que tu as trouvées tout à l'heure
+cloudinary.config( 
+  cloud_name = "dpxjchsm9", 
+  api_key = "267651223626921", 
+  api_secret = "mCzSPc6jPu5N9pTE38REnK48izI", 
+  secure = True
+)
 app = Flask(__name__)
 CORS(app)
 
@@ -125,7 +134,7 @@ def update_friendship(user1, user2, points):
             "last_interaction":datetime.utcnow()
         })
 
-# ----- HOME -----
+    # ----- HOME -----
 @app.route("/")
 def home():
     return {
@@ -392,7 +401,7 @@ def get_messages(current_user, contact):
             {"sender": contact, "receiver": current_user["username"]}
         ]
     }
-    msgs = messages_col.find(query).sort("date", 1) # 1 pour l'ordre chronologique
+    msgs = messages_col.find(query).sort("date", 1) # 1 pour l'ordre chronologiques
     
     output = []
     for m in msgs:
@@ -402,6 +411,122 @@ def get_messages(current_user, contact):
             "date": m["date"].isoformat()
         })
     return jsonify(output)
+
+# ----- VOIR MON PROPRE PROFIL (SÉCURISÉ) -----
+@app.route("/utilisateurs/me", methods=["GET"])
+@token_required
+def get_my_profile(current_user):
+    # On compte ses stats en temps réel
+    followers = follows_col.count_documents({"followed": current_user["username"]})
+    following = follows_col.count_documents({"follower": current_user["username"]})
+    posts_count = posts_col.count_documents({"username": current_user["username"]})
+
+    return jsonify({
+        "_id": str(current_user["_id"]),
+        "username": current_user["username"],
+        "email": current_user["email"],
+        "bio": current_user.get("bio", "Explorateur de la galaxie Astra"),
+        "profile_picture": current_user.get("profile_picture", ""),
+        "followers": followers,
+        "following": following,
+        "posts": posts_count,
+        "created_at": current_user.get("created_at").isoformat() if current_user.get("created_at") else None
+    })
+
+# ----- METTRE À JOUR LE PROFIL -----
+@app.route("/utilisateurs/update", methods=["PUT"])
+@token_required
+def update_profile(current_user):
+    data = request.json
+    updates = {}
+
+    # On ne met à jour que ce qui est envoyé
+    if "bio" in data:
+        updates["bio"] = data["bio"]
+    if "profile_picture" in data:
+        updates["profile_picture"] = data["profile_picture"]
+    
+    if not updates:
+        return jsonify({"error": "Aucune donnée à modifier"}), 400
+
+    users_col.update_one(
+        {"_id": current_user["_id"]},
+        {"$set": updates}
+    )
+
+    return jsonify({"message": "Profil mis à jour avec succès ✨"})
+
+    # ----- LOGOUT -----statue e ligne deconecter
+@app.route("/logout", methods=["POST"])
+@token_required
+def logout(current_user):
+    users_col.update_one(
+        {"_id": current_user["_id"]},
+        {"$set": {"online": False}}
+    )
+    return jsonify({"message": "Déconnexion réussie"})
+
+    # ----- PROFIL PUBLIC AMÉLIORÉ -----les utlilisateur peut voir la photo de leur amis---------
+@app.route("/profil/<username>")
+def profil_public(username):
+    user = users_col.find_one({"username": username})
+
+    if not user:
+        return jsonify({"error": "Utilisateur introuvable"}), 404
+
+    followers = follows_col.count_documents({"followed": username})
+    following = follows_col.count_documents({"follower": username})
+    posts_count = posts_col.count_documents({"username": username})
+
+    return jsonify({
+        "username": username,
+        "bio": user.get("bio", ""),
+        "profile_picture": user.get("profile_picture", ""),
+        "followers": followers,
+        "following": following,
+        "posts": posts_count,
+        "online": user.get("online", False)
+    })
+
+#-----route pour recevoir les photo de mes utilesateur (stoker derectemrent dans cloudinary)---------
+@app.route("/utilisateurs/avatar", methods=["POST"])
+@token_required
+def upload_avatar(current_user):
+    if 'file' not in request.files:
+        return jsonify({"error": "Aucun fichier envoyé"}), 400
+    
+    file_to_upload = request.files['file']
+    
+    try:
+        # 1. Envoi vers Cloudinary avec transformation automatique
+        upload_result = cloudinary.uploader.upload(
+            file_to_upload,
+            folder="astra_avatars/",
+            public_id=f"user_{current_user['username']}",
+            overwrite=True,
+            transformation=[
+                {"width": 400, "height": 400, "crop": "fill", "gravity": "face"},
+                {"radius": "max"},
+                {"fetch_format": "auto"}
+            ]
+        )
+        
+        # 2. On récupère l'URL permanente
+        image_url = upload_result["secure_url"]
+
+        # 3. On met à jour MongoDB
+        users_col.update_one(
+            {"_id": current_user["_id"]},
+            {"$set": {"profile_picture": image_url}}
+        )
+
+        return jsonify({
+            "message": "Avatar Astra mis à jour ! 🚀",
+            "url": image_url
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # ----- RUN SERVER (RENDER) -----
 if __name__ == "__main__":
