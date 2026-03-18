@@ -6,3 +6,4 @@ pyjwt
 flask-limiter
 gunicorn
 flask-cors
+cloudinary
