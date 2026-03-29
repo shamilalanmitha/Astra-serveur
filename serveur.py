@@ -85,7 +85,7 @@ def update_friendship(user1, user2, points):
 
 @app.route("/") # Ta page d'accueil navigateur
 def home():
-    return {"status": "Astra serveur actif 🚀", "créateur": "Alan Mitha", "version": "3.3"}
+    return {"status": " serveur Yrion actif 🚀", "créateur": "Alan Mitha", "version": "3.3"}
 
 @app.route("/utilisateurs", methods=["POST"]) # Inscription avec choix Privé/Public
 def creer_utilisateur():
